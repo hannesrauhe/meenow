@@ -1,7 +1,8 @@
 import './style.css';
 import { getAuthState, handleOAuthCallback } from './api/auth';
 import { getTodayTrigger, computeState, type AppState } from './timer';
-import { postsToday, hasEverPosted } from './state';
+import { postsToday, hasEverPosted, syncPostCount } from './state';
+import { fetchTodayPostCount } from './api/pixelfed';
 import { renderCountdown, updateCountdownDisplay } from './screens/countdown';
 import { renderCapture } from './screens/capture';
 import { renderFeed } from './screens/feed';
@@ -57,6 +58,12 @@ async function init(): Promise<void> {
 
   tick();
   tickId = window.setInterval(tick, 1000);
+
+  // Sync today's post count from server so second devices start with the right state.
+  const auth = getAuthState();
+  if (auth && postsToday() === 0) {
+    fetchTodayPostCount(auth).then(syncPostCount).catch(() => {});
+  }
 }
 
 init();

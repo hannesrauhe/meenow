@@ -166,3 +166,23 @@ export async function fetchMeenowFeed(auth: AuthState): Promise<FeedPost[]> {
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .map(toFeedPost);
 }
+
+export async function fetchTodayPostCount(auth: AuthState): Promise<number> {
+  if (!auth.accountId) return 0;
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  try {
+    const res = await fetch(
+      `https://${auth.instance}/api/v1/accounts/${auth.accountId}/statuses?limit=10&exclude_replies=true`,
+      { headers: { Authorization: `Bearer ${auth.accessToken}` } },
+    );
+    if (!res.ok) return 0;
+    const statuses = await res.json() as MastodonStatus[];
+    return statuses.filter(s =>
+      new Date(s.created_at).getTime() >= todayStart.getTime() &&
+      s.tags.some(t => t.name.toLowerCase() === 'meenowapp'),
+    ).length;
+  } catch {
+    return 0;
+  }
+}

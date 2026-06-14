@@ -32,6 +32,16 @@ export function isPwaInstalled(): boolean {
   );
 }
 
+export function syncPostCount(serverCount: number): void {
+  const local = postsToday();
+  if (serverCount > local) {
+    localStorage.setItem(
+      `${PREFIX}posts:${localDateString()}`,
+      String(Math.min(serverCount, MAX_POSTS_PER_TRIGGER)),
+    );
+  }
+}
+
 export function getCurrentState(): AppState {
   return computeState(getTodayTrigger(), postsToday(), !hasEverPosted());
 }
