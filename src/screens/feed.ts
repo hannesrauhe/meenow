@@ -3,6 +3,7 @@ import { clearAuth } from '../api/auth';
 import { getAuthState } from '../api/auth';
 import { postsToday, MAX_POSTS_PER_TRIGGER } from '../state';
 import { fetchMeenowFeed, type FeedPost } from '../api/pixelfed';
+import { renderCapture } from './capture';
 
 export function renderFeed(): HTMLElement {
   const el = document.createElement('div');
@@ -11,10 +12,14 @@ export function renderFeed(): HTMLElement {
 
   const header = document.createElement('header');
   header.className = 'sticky top-0 z-10 bg-cream/95 backdrop-blur-sm flex items-center justify-between px-5 py-4 border-b border-ink/10';
+  const count = postsToday();
   header.innerHTML = `
     <h1 class="text-xl font-semibold tracking-tight text-ink">meenow</h1>
-    <div class="flex items-center gap-4">
-      <span class="text-xs text-gold font-medium">${postsToday()}/${MAX_POSTS_PER_TRIGGER} posted</span>
+    <div class="flex items-center gap-3">
+      ${count < MAX_POSTS_PER_TRIGGER
+        ? `<button id="btn-post-again" class="text-sm font-semibold text-gold">+ Post</button>`
+        : ''}
+      <span class="text-xs text-ink/40">${count}/${MAX_POSTS_PER_TRIGGER} posted</span>
       <button id="btn-logout" class="text-xs text-ink/35 hover:text-ink/60 transition-colors">disconnect</button>
     </div>
   `;
@@ -23,6 +28,11 @@ export function renderFeed(): HTMLElement {
   const content = document.createElement('div');
   content.id = 'feed-content';
   el.appendChild(content);
+
+  header.querySelector('#btn-post-again')?.addEventListener('click', () => {
+    const appEl = document.getElementById('app');
+    if (appEl) { appEl.innerHTML = ''; appEl.appendChild(renderCapture()); }
+  });
 
   header.querySelector('#btn-logout')?.addEventListener('click', () => {
     clearAuth();

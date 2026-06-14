@@ -55,7 +55,7 @@ export type AppState = 'before_trigger' | 'awaiting_capture' | 'feed';
 
 export function computeState(trigger: Date, postCount: number, isNewUser: boolean): AppState {
   if (!isNewUser && postCount === 0 && Date.now() < trigger.getTime()) return 'before_trigger';
-  if (postCount < 2) return 'awaiting_capture';
+  if (postCount === 0) return 'awaiting_capture';
   return 'feed';
 }
 
