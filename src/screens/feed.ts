@@ -19,7 +19,6 @@ export function renderFeed(onRequestCapture: () => void): HTMLElement {
         ? `<button id="btn-post-again" class="text-sm font-semibold text-gold">+ Post</button>`
         : ''}
       <span class="text-xs text-ink/40">${count}/${MAX_POSTS_PER_TRIGGER} posted</span>
-      <button id="btn-logout" class="text-xs text-ink/35 hover:text-ink/60 transition-colors">disconnect</button>
     </div>
   `;
   el.appendChild(header);
@@ -29,17 +28,22 @@ export function renderFeed(onRequestCapture: () => void): HTMLElement {
   el.appendChild(content);
 
   const footer = document.createElement('footer');
-  footer.className = 'py-6 text-center text-xs text-ink/25';
-  footer.innerHTML = `Meenow is an experimental side project by <a href="https://rauhe.eu" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2">Hannes Rauhe</a>`;
+  footer.className = 'py-6 text-center text-xs text-ink/25 space-y-2';
+
+  const credit = document.createElement('p');
+  credit.innerHTML = `Meenow is an experimental side project by <a href="https://rauhe.eu" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2">Hannes Rauhe</a>`;
+  footer.appendChild(credit);
+
+  const logoutBtn = document.createElement('button');
+  logoutBtn.className = 'text-ink/30 hover:text-ink/60 transition-colors';
+  logoutBtn.textContent = 'disconnect';
+  logoutBtn.addEventListener('click', () => { clearAuth(); window.location.reload(); });
+  footer.appendChild(logoutBtn);
+
   el.appendChild(footer);
 
   header.querySelector('#btn-post-again')?.addEventListener('click', () => {
     onRequestCapture();
-  });
-
-  header.querySelector('#btn-logout')?.addEventListener('click', () => {
-    clearAuth();
-    window.location.reload();
   });
 
   loadFeed(content, auth);
