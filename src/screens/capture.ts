@@ -118,7 +118,7 @@ export function renderCapture(): HTMLElement {
 
   function show(step: Step, message = ''): void {
     stopAllStreams();
-    root.className = step === 'back' || step === 'front'
+    root.className = step === 'back' || step === 'front' || step === 'preview'
       ? 'fixed inset-0 bg-black'
       : 'screen gap-8 text-center';
     root.innerHTML = '';
@@ -236,16 +236,20 @@ export function renderCapture(): HTMLElement {
 
   function makePreview(): HTMLElement {
     const d = document.createElement('div');
-    d.className = 'fixed inset-0 flex flex-col bg-black';
+    d.className = 'w-full h-full flex flex-col';
+
+    const imgWrapper = document.createElement('div');
+    imgWrapper.className = 'flex-1 min-h-0 flex items-center justify-center overflow-hidden';
     const url = URL.createObjectURL(compositeBlob!);
     const img = document.createElement('img');
     img.src = url;
-    img.className = 'flex-1 object-contain';
+    img.className = 'max-w-full max-h-full object-contain';
     img.alt = 'Your meenow photo';
-    d.appendChild(img);
+    imgWrapper.appendChild(img);
+    d.appendChild(imgWrapper);
 
     const bar = document.createElement('div');
-    bar.className = 'bg-cream px-6 py-5 safe-area-bottom flex gap-3';
+    bar.className = 'shrink-0 bg-cream px-6 py-5 safe-area-bottom flex gap-3';
     bar.innerHTML = `
       <button id="btn-retake" class="flex-1 border border-ink/20 text-ink rounded-full py-3 text-sm font-medium">Retake</button>
       <button id="btn-post" class="flex-1 btn-primary">Post</button>

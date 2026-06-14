@@ -1,5 +1,51 @@
 import type { AuthState } from './auth';
 
+// --- Mastodon/Pixelfed API types ---
+
+interface MastodonAccount {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar: string;
+  url: string;
+}
+
+interface MastodonMediaAttachment {
+  id: string;
+  url: string;
+  preview_url: string;
+}
+
+interface MastodonTag {
+  name: string;
+}
+
+interface MastodonStatus {
+  id: string;
+  url: string;
+  created_at: string;
+  account: MastodonAccount;
+  media_attachments: MastodonMediaAttachment[];
+  tags: MastodonTag[];
+}
+
+// --- Public types ---
+
+export interface FeedPost {
+  id: string;
+  url: string;
+  createdAt: Date;
+  account: {
+    displayName: string;
+    username: string;
+    avatarUrl: string;
+  };
+  compositeUrl: string;
+  allMediaUrls: string[];
+}
+
+// --- Upload / post ---
+
 async function uploadOne(auth: AuthState, blob: Blob, description: string): Promise<string> {
   const form = new FormData();
   form.append('file', blob, 'meenow.jpg');
@@ -15,7 +61,6 @@ async function uploadOne(auth: AuthState, blob: Blob, description: string): Prom
 
   if (media.url !== null) return media.id;
 
-  // Poll until the instance finishes processing
   for (let i = 0; i < 20; i++) {
     await new Promise(r => setTimeout(r, 1500));
     const poll = await fetch(`https://${auth.instance}/api/v1/media/${media.id}`, {
@@ -34,7 +79,6 @@ export async function postMeenow(
   backPhoto: Blob,
   frontPhoto: Blob,
 ): Promise<string> {
-  // Upload all three. Composite is first so it appears as the lead image.
   const [compositeId, backId, frontId] = await Promise.all([
     uploadOne(auth, composite, 'meenow — daily photo'),
     uploadOne(auth, backPhoto, 'meenow — surroundings'),
@@ -50,10 +94,57 @@ export async function postMeenow(
     body: JSON.stringify({
       status: '#meenowApp',
       media_ids: [compositeId, backId, frontId],
-      visibility: 'private', // followers only
+      visibility: 'private',
     }),
   });
   if (!res.ok) throw new Error(`Post failed (${res.status})`);
   const status = await res.json() as { url: string };
   return status.url;
+}
+
+// --- Feed ---
+
+function toFeedPost(s: MastodonStatus): FeedPost {
+  return {
+    id: s.id,
+    url: s.url,
+    createdAt: new Date(s.created_at),
+    account: {
+      displayName: s.account.display_name || s.account.username,
+      username: s.account.username,
+      avatarUrl: s.account.avatar,
+    },
+    compositeUrl: s.media_attachments[0]?.url ?? '',
+    allMediaUrls: s.media_attachments.map(m => m.url),
+  };
+}
+
+export async function fetchMeenowFeed(auth: AuthState): Promise<FeedPost[]> {
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+
+  const [homeRes, ownRes] = await Promise.all([
+    fetch(`https://${auth.instance}/api/v1/timelines/home?limit=40`, {
+      headers: { Authorization: `Bearer ${auth.accessToken}` },
+    }),
+    fetch(`https://${auth.instance}/api/v1/accounts/${auth.accountId}/statuses?limit=20&exclude_replies=true`, {
+      headers: { Authorization: `Bearer ${auth.accessToken}` },
+    }),
+  ]);
+
+  const home: MastodonStatus[] = homeRes.ok ? await homeRes.json() as MastodonStatus[] : [];
+  const own: MastodonStatus[] = ownRes.ok ? await ownRes.json() as MastodonStatus[] : [];
+
+  const seen = new Set<string>();
+  return [...home, ...own]
+    .filter(s => {
+      if (seen.has(s.id)) return false;
+      seen.add(s.id);
+      return (
+        new Date(s.created_at).getTime() > cutoff &&
+        s.media_attachments.length > 0 &&
+        s.tags.some(t => t.name === 'meenowapp')
+      );
+    })
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .map(toFeedPost);
 }

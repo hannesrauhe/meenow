@@ -9,17 +9,32 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 function isIOS(): boolean {
-  return /iphone|ipad|ipod/i.test(navigator.userAgent);
+  return (
+    /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+}
+
+export function removeInstallNudge(): void {
+  document.getElementById('install-nudge')?.remove();
 }
 
 export function renderInstallNudge(): void {
   if (isPwaInstalled() || isInstallDismissed()) return;
-
   const existing = document.getElementById('install-nudge');
   if (existing) return;
 
   const ios = isIOS();
-  const showInstallButton = !ios && deferredPrompt !== null;
+  const canPrompt = !ios && deferredPrompt !== null;
+
+  let instructions: string;
+  if (ios) {
+    instructions = 'Tap <strong>Share ↑</strong> then <strong>Add to Home Screen</strong>.';
+  } else if (canPrompt) {
+    instructions = 'Get the full native experience with notifications.';
+  } else {
+    instructions = 'Open your browser menu and tap <strong>Add to Home Screen</strong>.';
+  }
 
   const banner = document.createElement('div');
   banner.id = 'install-nudge';
@@ -31,16 +46,12 @@ export function renderInstallNudge(): void {
     'border-t border-white/10',
   ].join(' ');
 
-  const instructions = ios
-    ? 'Tap <strong>Share</strong> &rsaquo; <strong>Add to Home Screen</strong> for notifications and the full native experience.'
-    : 'Install meenow for a native app experience and notifications.';
-
   banner.innerHTML = `
     <div class="flex-1 min-w-0">
-      <p class="text-sm font-medium leading-snug">Add to your home screen</p>
+      <p class="text-sm font-medium leading-snug">Add meenow to your home screen</p>
       <p class="text-xs text-cream/55 mt-0.5 leading-snug">${instructions}</p>
     </div>
-    ${showInstallButton ? '<button id="btn-install" class="shrink-0 bg-gold text-ink rounded-full px-4 py-1.5 text-sm font-medium">Install</button>' : ''}
+    ${canPrompt ? '<button id="btn-install" class="shrink-0 bg-gold text-ink rounded-full px-4 py-1.5 text-sm font-medium">Install</button>' : ''}
     <button id="btn-dismiss-install" class="shrink-0 text-cream/40 text-xl leading-none" aria-label="Dismiss">&times;</button>
   `;
 
