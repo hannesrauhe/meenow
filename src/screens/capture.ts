@@ -32,11 +32,23 @@ async function openCamera(
   return stream;
 }
 
-async function captureFrame(video: HTMLVideoElement): Promise<Blob> {
+async function captureFrame(video: HTMLVideoElement, forcePortrait: boolean): Promise<Blob> {
+  const W = video.videoWidth;
+  const H = video.videoHeight;
   const canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext('2d')!.drawImage(video, 0, 0);
+  if (forcePortrait && W > H) {
+    // Rotate landscape stream 90° clockwise to portrait
+    canvas.width = H;
+    canvas.height = W;
+    const ctx = canvas.getContext('2d')!;
+    ctx.translate(H, 0);
+    ctx.rotate(Math.PI / 2);
+    ctx.drawImage(video, 0, 0);
+  } else {
+    canvas.width = W;
+    canvas.height = H;
+    canvas.getContext('2d')!.drawImage(video, 0, 0);
+  }
   return new Promise((resolve, reject) =>
     canvas.toBlob(b => b ? resolve(b) : reject(new Error('Canvas toBlob failed')), 'image/jpeg', 0.92),
   );
@@ -115,6 +127,7 @@ export function renderCapture(): HTMLElement {
   let backBlob: Blob | null = null;
   let frontBlob: Blob | null = null;
   let compositeBlob: Blob | null = null;
+  let preferPortrait = true;
 
   function show(step: Step, message = ''): void {
     stopAllStreams();
@@ -171,6 +184,15 @@ export function renderCapture(): HTMLElement {
     hint.textContent = 'Point at your surroundings';
     d.appendChild(hint);
 
+    const orientBtn = document.createElement('button');
+    orientBtn.className = 'absolute top-8 right-4 text-white/70 text-xs bg-black/30 rounded-full px-3 py-1.5 backdrop-blur-sm';
+    orientBtn.textContent = preferPortrait ? '↕ portrait' : '↔ landscape';
+    orientBtn.addEventListener('click', () => {
+      preferPortrait = !preferPortrait;
+      orientBtn.textContent = preferPortrait ? '↕ portrait' : '↔ landscape';
+    });
+    d.appendChild(orientBtn);
+
     const btn = document.createElement('button');
     btn.className = 'absolute bottom-12 left-1/2 -translate-x-1/2 w-20 h-20 text-white drop-shadow-lg active:scale-95';
     btn.setAttribute('aria-label', 'Capture');
@@ -183,7 +205,7 @@ export function renderCapture(): HTMLElement {
   }
 
   async function captureBack(video: HTMLVideoElement): Promise<void> {
-    backBlob = await captureFrame(video).catch(() => null);
+    backBlob = await captureFrame(video, preferPortrait).catch(() => null);
     if (!backBlob) { show('error', 'Failed to capture.'); return; }
     stopAllStreams();
     show('switching');
@@ -226,7 +248,7 @@ export function renderCapture(): HTMLElement {
       await new Promise(r => setTimeout(r, 1000));
     }
     if (countdownEl) countdownEl.textContent = '';
-    frontBlob = await captureFrame(video).catch(() => null);
+    frontBlob = await captureFrame(video, preferPortrait).catch(() => null);
     if (!frontBlob) { show('error', 'Failed to capture selfie.'); return; }
     stopAllStreams();
     compositeBlob = await stitchPhotos(backBlob!, frontBlob).catch(() => null);

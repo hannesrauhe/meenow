@@ -110,7 +110,7 @@ function makePostCard(post: FeedPost, unblurred: boolean): HTMLElement {
     <div class="relative overflow-hidden cursor-pointer" id="post-img-${post.id}">
       <img
         src="${post.compositeUrl}"
-        class="w-full aspect-square object-cover ${unblurred ? '' : 'blur-2xl scale-110'}"
+        class="w-full block ${unblurred ? '' : 'blur-2xl scale-110'}"
         alt="meenow photo"
         loading="lazy"
       />

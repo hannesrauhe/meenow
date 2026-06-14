@@ -80,8 +80,9 @@ export async function postMeenow(
   backPhoto: Blob,
   frontPhoto: Blob,
 ): Promise<string> {
-  const [compositeId, backId, frontId] = await Promise.all([
-    uploadOne(auth, composite, 'meenow — daily photo'),
+  // Upload composite first so it gets the lowest attachment ID and appears first in the gallery
+  const compositeId = await uploadOne(auth, composite, 'meenow — daily photo');
+  const [backId, frontId] = await Promise.all([
     uploadOne(auth, backPhoto, 'meenow — surroundings'),
     uploadOne(auth, frontPhoto, 'meenow — selfie'),
   ]);
