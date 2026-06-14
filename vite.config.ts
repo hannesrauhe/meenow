@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  base: process.env.GITHUB_ACTIONS === 'true' ? '/meenow/' : '/',
+  base: '/',
   plugins: [
     VitePWA({
       registerType: 'autoUpdate',
@@ -14,7 +14,7 @@ export default defineConfig({
         background_color: '#FDFBF7',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: process.env.GITHUB_ACTIONS === 'true' ? '/meenow/' : '/',
+        start_url: '/',
         icons: [
           { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml' },
         ],
