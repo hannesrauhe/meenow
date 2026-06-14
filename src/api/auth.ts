@@ -105,9 +105,13 @@ export function getAuthState(): AuthState | null {
   const instance = localStorage.getItem(`${PREFIX}instance`);
   if (!instance) return null;
   const accessToken = localStorage.getItem(key(instance, 'token'));
-  const accountId = localStorage.getItem(key(instance, 'accountId'));
-  if (!accessToken || !accountId) return null;
+  if (!accessToken) return null;
+  const accountId = localStorage.getItem(key(instance, 'accountId')) ?? '';
   return { instance, accessToken, accountId };
+}
+
+export function patchAccountId(instance: string, accountId: string): void {
+  localStorage.setItem(key(instance, 'accountId'), accountId);
 }
 
 export function clearAuth(): void {

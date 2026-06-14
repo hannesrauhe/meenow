@@ -1,4 +1,5 @@
 import type { AuthState } from './auth';
+import { patchAccountId } from './auth';
 
 // --- Mastodon/Pixelfed API types ---
 
@@ -122,13 +123,30 @@ function toFeedPost(s: MastodonStatus): FeedPost {
 export async function fetchMeenowFeed(auth: AuthState): Promise<FeedPost[]> {
   const cutoff = Date.now() - 24 * 60 * 60 * 1000;
 
+  // Backfill accountId for users who logged in before it was stored
+  let accountId = auth.accountId;
+  if (!accountId) {
+    try {
+      const meRes = await fetch(`https://${auth.instance}/api/v1/accounts/verify_credentials`, {
+        headers: { Authorization: `Bearer ${auth.accessToken}` },
+      });
+      if (meRes.ok) {
+        const { id } = await meRes.json() as { id: string };
+        accountId = id;
+        patchAccountId(auth.instance, id);
+      }
+    } catch { /* proceed with home timeline only */ }
+  }
+
   const [homeRes, ownRes] = await Promise.all([
     fetch(`https://${auth.instance}/api/v1/timelines/home?limit=40`, {
       headers: { Authorization: `Bearer ${auth.accessToken}` },
     }),
-    fetch(`https://${auth.instance}/api/v1/accounts/${auth.accountId}/statuses?limit=20&exclude_replies=true`, {
-      headers: { Authorization: `Bearer ${auth.accessToken}` },
-    }),
+    accountId
+      ? fetch(`https://${auth.instance}/api/v1/accounts/${accountId}/statuses?limit=20&exclude_replies=true`, {
+          headers: { Authorization: `Bearer ${auth.accessToken}` },
+        })
+      : Promise.resolve(new Response('[]', { status: 200 })),
   ]);
 
   const home: MastodonStatus[] = homeRes.ok ? await homeRes.json() as MastodonStatus[] : [];
