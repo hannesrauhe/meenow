@@ -14,6 +14,14 @@ type Screen = AppState | 'login' | 'capturing';
 let activeScreen: Screen | null = null;
 let tickId: number | null = null;
 
+const DEV_HOSTNAMES = new Set(['dev.meenow.de', 'localhost', '127.0.0.1']);
+if (DEV_HOSTNAMES.has(window.location.hostname)) {
+  const badge = document.createElement('div');
+  badge.textContent = 'dev';
+  badge.className = 'fixed bottom-3 right-3 bg-gold text-white text-xs font-semibold px-2 py-0.5 rounded-full z-50 opacity-75 pointer-events-none select-none';
+  document.body.appendChild(badge);
+}
+
 function mountCapture(): void {
   activeScreen = 'capturing';
   app.innerHTML = '';
