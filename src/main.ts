@@ -1,7 +1,7 @@
 import './style.css';
 import { getAuthState, handleOAuthCallback } from './api/auth';
 import { getTodayTrigger, computeState, type AppState } from './timer';
-import { postsToday } from './state';
+import { postsToday, hasEverPosted } from './state';
 import { renderCountdown, updateCountdownDisplay } from './screens/countdown';
 import { renderCapture } from './screens/capture';
 import { renderFeed } from './screens/feed';
@@ -25,7 +25,7 @@ function mount(screen: Screen): void {
 function tick(): void {
   const auth = getAuthState();
   const screen: Screen = auth
-    ? computeState(getTodayTrigger(), postsToday())
+    ? computeState(getTodayTrigger(), postsToday(), !hasEverPosted())
     : 'login';
 
   if (screen !== activeScreen) {

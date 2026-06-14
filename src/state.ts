@@ -11,6 +11,10 @@ export function markPostedToday(): void {
   localStorage.setItem(`${PREFIX}posts:${localDateString()}`, String(postsToday() + 1));
 }
 
+export function hasEverPosted(): boolean {
+  return Object.keys(localStorage).some(k => k.startsWith(`${PREFIX}posts:`));
+}
+
 export function isInstallDismissed(): boolean {
   const raw = localStorage.getItem(`${PREFIX}install-dismiss`);
   if (!raw) return false;
@@ -29,5 +33,5 @@ export function isPwaInstalled(): boolean {
 }
 
 export function getCurrentState(): AppState {
-  return computeState(getTodayTrigger(), postsToday());
+  return computeState(getTodayTrigger(), postsToday(), !hasEverPosted());
 }
