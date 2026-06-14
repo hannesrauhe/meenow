@@ -142,7 +142,7 @@ export async function fetchMeenowFeed(auth: AuthState): Promise<FeedPost[]> {
       return (
         new Date(s.created_at).getTime() > cutoff &&
         s.media_attachments.length > 0 &&
-        s.tags.some(t => t.name === 'meenowapp')
+        s.tags.some(t => t.name.toLowerCase() === 'meenowapp')
       );
     })
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
