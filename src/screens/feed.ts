@@ -29,6 +29,11 @@ export function renderFeed(): HTMLElement {
   content.id = 'feed-content';
   el.appendChild(content);
 
+  const footer = document.createElement('footer');
+  footer.className = 'py-6 text-center text-xs text-ink/25';
+  footer.innerHTML = `Meenow is an experimental side project by <a href="https://rauhe.eu" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2">Hannes Rauhe</a>`;
+  el.appendChild(footer);
+
   header.querySelector('#btn-post-again')?.addEventListener('click', () => {
     const appEl = document.getElementById('app');
     if (appEl) { appEl.innerHTML = ''; appEl.appendChild(renderCapture()); }

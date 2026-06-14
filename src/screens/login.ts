@@ -37,6 +37,11 @@ export function renderLogin(): HTMLElement {
       meenow posts to your account with followers-only visibility.<br/>
       Your credentials are never stored by this app.
     </p>
+
+    <p class="text-xs text-ink/25 text-center mt-4">
+      Meenow is an experimental side project by
+      <a href="https://rauhe.eu" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2">Hannes Rauhe</a>
+    </p>
   `;
 
   const form = el.querySelector('#login-form') as HTMLFormElement;

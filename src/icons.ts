@@ -24,14 +24,3 @@ export const SLEEPING_CAT = `
   <path d="M91 11 Q94 7 92 11" stroke="currentColor" stroke-width="1.2" fill="none" opacity="0.3"/>
 </svg>
 `;
-
-export const PAW_PRINT = `
-<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <ellipse cx="20" cy="27" rx="8" ry="6" fill="currentColor"/>
-  <ellipse cx="10" cy="18" rx="4" ry="5" fill="currentColor"/>
-  <ellipse cx="20" cy="15" rx="4" ry="5" fill="currentColor"/>
-  <ellipse cx="30" cy="18" rx="4" ry="5" fill="currentColor"/>
-  <ellipse cx="14" cy="10" rx="3" ry="3.5" fill="currentColor"/>
-  <ellipse cx="26" cy="10" rx="3" ry="3.5" fill="currentColor"/>
-</svg>
-`;

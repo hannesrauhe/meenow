@@ -41,6 +41,11 @@ export function renderCountdown(): HTMLElement {
       </p>
       <p class="text-xs text-ink/40">Come back then to take your daily photo</p>
     </div>
+
+    <p class="text-xs text-ink/25 text-center mt-8">
+      Meenow is an experimental side project by
+      <a href="https://rauhe.eu" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2">Hannes Rauhe</a>
+    </p>
   `;
 
   return el;
