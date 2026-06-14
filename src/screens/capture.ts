@@ -1,4 +1,4 @@
-import { markPostedToday } from '../state';
+import { markPostedToday, postsToday, MAX_POSTS_PER_TRIGGER } from '../state';
 import { getAuthState } from '../api/auth';
 import { postMeenow } from '../api/pixelfed';
 import { CAT_EARS_SHUTTER } from '../icons';
@@ -133,13 +133,16 @@ export function renderCapture(): HTMLElement {
   }
 
   function makeStart(): HTMLElement {
+    const count = postsToday();
+    const isSecond = count === MAX_POSTS_PER_TRIGGER - 1;
     const d = document.createElement('div');
     d.className = 'flex flex-col items-center gap-8';
     d.innerHTML = `
       <div class="space-y-2">
-        <h2 class="text-2xl font-semibold text-ink">It's meenow time!</h2>
+        <p class="text-xs text-ink/40 uppercase tracking-widest">${count + 1} of ${MAX_POSTS_PER_TRIGGER}</p>
+        <h2 class="text-2xl font-semibold text-ink">${isSecond ? 'One more meenow!' : "It's meenow time!"}</h2>
         <p class="text-sm text-ink/60 max-w-xs leading-relaxed">
-          First your surroundings, then your selfie.
+          ${isSecond ? 'Go again — surroundings first, then your face.' : 'First your surroundings, then your selfie.'}
         </p>
       </div>
     `;

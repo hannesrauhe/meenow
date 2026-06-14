@@ -1,5 +1,6 @@
 import { SLEEPING_CAT } from '../icons';
 import { clearAuth } from '../api/auth';
+import { postsToday, MAX_POSTS_PER_TRIGGER } from '../state';
 
 // Phase 5 will replace this with the actual Pixelfed timeline feed.
 export function renderFeed(): HTMLElement {
@@ -11,6 +12,7 @@ export function renderFeed(): HTMLElement {
     <div class="flex flex-col items-center gap-4 text-ink/40">
       <div class="w-36 h-24">${SLEEPING_CAT}</div>
       <div class="space-y-1">
+        <p class="text-xs text-gold uppercase tracking-widest">${postsToday()} of ${MAX_POSTS_PER_TRIGGER} posted today</p>
         <p class="text-sm">No meenow posts from friends yet today.</p>
         <p class="text-xs text-ink/25">Feed coming in Phase 5.</p>
       </div>

@@ -1,13 +1,14 @@
 import { getTodayTrigger, computeState, localDateString, type AppState } from './timer';
 
 const PREFIX = 'meenow:';
+export const MAX_POSTS_PER_TRIGGER = 2;
 
-export function hasPostedToday(): boolean {
-  return localStorage.getItem(`${PREFIX}posted:${localDateString()}`) === '1';
+export function postsToday(): number {
+  return Number(localStorage.getItem(`${PREFIX}posts:${localDateString()}`) ?? '0');
 }
 
 export function markPostedToday(): void {
-  localStorage.setItem(`${PREFIX}posted:${localDateString()}`, '1');
+  localStorage.setItem(`${PREFIX}posts:${localDateString()}`, String(postsToday() + 1));
 }
 
 export function isInstallDismissed(): boolean {
@@ -28,5 +29,5 @@ export function isPwaInstalled(): boolean {
 }
 
 export function getCurrentState(): AppState {
-  return computeState(getTodayTrigger(), hasPostedToday());
+  return computeState(getTodayTrigger(), postsToday());
 }

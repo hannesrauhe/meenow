@@ -53,9 +53,9 @@ export function getWindowStart(): Date {
 
 export type AppState = 'before_trigger' | 'awaiting_capture' | 'feed';
 
-export function computeState(trigger: Date, postedToday: boolean): AppState {
+export function computeState(trigger: Date, postCount: number): AppState {
   if (Date.now() < trigger.getTime()) return 'before_trigger';
-  if (!postedToday) return 'awaiting_capture';
+  if (postCount < 2) return 'awaiting_capture';
   return 'feed';
 }
 
