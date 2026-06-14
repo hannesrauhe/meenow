@@ -1,97 +1,130 @@
 # meenow
-Webapp pixelfed client to share daily selfies with friends
 
-# Implementation Blueprint: **meeow**
+A decentralized, serverless, cat-themed spontaneous photo-sharing PWA for Pixelfed.
 
-**A Decentralized, Serverless, Cat-Themed Spontaneous Photo-Sharing Client for Pixelfed**
+Users take a daily dual-camera photo (back + front stitched into one image) at a pseudo-random local time, then share it with friends via the Fediverse. No custom backend or database — the Pixelfed/Mastodon API is the entire backend.
 
 ---
 
-## 1. Project Overview & Architecture
+## Implementation Blueprint
 
-**meeow** is a serverless, client-side-only Progressive Web App (PWA) designed for mobile browsers. It introduces a spontaneous daily photo-sharing mechanic to the decentralized **Pixelfed/Mastodon API**, utilizing the Fediverse as its entire backend.
-
-* **Hosting:** Static hosting only (GitHub Pages / Nginx). No custom backend or database allowed.
-* **Authentication:** Client-side OAuth directly with the user's chosen Pixelfed instance.
-* **Theme:** Subtle, clean cat aesthetics (e.g., whiskers on the camera shutter button, "Purr-fectly on time" indicators, warm cream/tabby color palette).
+### 1. Architecture
 
 ```
    ┌────────────────────────────────────────────────────────┐
-   │                     Meeow PWA                          │
-   │   (React / Vue / or Vanilla JS + Tailwind)             │
+   │                     meenow PWA                         │
+   │           Vite + Vanilla TypeScript + Tailwind         │
    └───────────┬────────────────────────────────┬───────────┘
                │                                │
                ▼                                ▼
-   [ LocalStorage / Crypto ]            [ Pixelfed API Engine ]
-   • Deterministic Time Calc            • OAuth Auth & Token management
-   • Sequential Dual Camera             • Post with #meeowApp
-   • 24h & Tag Feed Filtering           • Feed Lockout State Logic
-
+   [ LocalStorage ]                   [ Pixelfed API Engine ]
+   • PRNG daily timer                 • Dynamic OAuth registration
+   • Camera capture state             • Token management (PKCE)
+   • "Posted today" cache             • Post with #meenowApp
+                                      • Feed filter + blur logic
 ```
 
----
-
-## 2. Core Functional Requirements
-
-### A. Pseudo-Random Daily Trigger (Deterministic Consensus)
-
-To ensure all global users receive the same "meeow time" simultaneously without a central notification server:
-
-* Implement a client-side pseudo-random number generator (PRNG) using a daily seed string format (`YYYY-MM-DD`).
-* The math must scale the daily random fraction to a window between **9:00 AM** and **9:00 PM** local time.
-* **State Locking:** If the current time is *past* today's calculated time, the app locks the timeline screen until the user uploads their daily photo.
-
-### B. Mobile Browser "Dual-Camera" Emulation
-
-Mobile browsers (especially iOS Safari) do not natively allow concurrent active streaming of front and back cameras.
-
-* **Sequential Capture Flow:**
-1. Activate back camera stream (`facingMode: "environment"`), take an immediate capture, and freeze the frame.
-2. Instantly switch to the front camera stream (`facingMode: "user"`), display a 2-second countdown/preview inside a small corner thumbnail overlay, and capture the selfie.
-
-
-* **Canvas Stitching:** Stitch both captures into a single canvas context. The selfie frame should sit as a rounded picture-in-picture box over the top-left quadrant of the back-camera frame. Export the composite image as a high-quality JPEG blob.
-
-### C. Pixelfed API Integration (Serverless)
-
-* **Dynamic Instance OAuth:** Allow users to type in their home Pixelfed instance domain (e.g., `pixelfed.social`). Authenticate via client-side OAuth 2.0 (Authorization Code Flow with PKCE, or Implicit Flow). Store the resulting bearer token securely in `localStorage`.
-* **Media Pipeline:** Use `POST /api/v1/media` to upload the stitched image blob, then create a status update via `POST /api/v1/statuses`.
-* **App Tagging:** Append a hidden/explicit unique marker hashtag to the status metadata or caption (e.g., `#meeowApp2026`).
-
-### D. The 24-Hour Feed Filtering Logic
-
-When pulling the user's home timeline (`GET /api/v1/timelines/home`):
-
-* Iterate through statuses and filter out posts older than 24 hours (`Date.now() - created_at > 86400000`).
-* Filter out posts that do not contain the tag `#meeowApp2026` to keep the feed hyper-focused on daily check-ins.
-* **Blur Overlays:** If the user hasn't completed today's camera capture yet, display a blurred placeholder container with a cat-scratch pattern and text: *"Curiosity killed the cat! Post yours to unblur your friends' timeline."*
+**Hosting:** Static only — GitHub Pages or any Nginx/CDN.
+**Platform targets:** Android and iOS mobile browsers are first-class. Desktop browsers are supported but deprioritized in UX design.
+**Tech stack:** Vite + Vanilla TypeScript + Tailwind CSS. No framework runtime. TypeScript provides compile-time safety without framework overhead; Vite handles bundling and produces a minimal static asset bundle.
 
 ---
 
-## 3. UI/UX & Theming Specifications
+### 2. Core Functional Requirements
 
-* **Design System:** Modern minimalist with clean typography, using a warm sand/cream background (`#FDFBF7`) and sharp dark slate accents.
-* **Cat Motifs (Subtle):**
-* Shutter Button: Custom circular button with minimalist cat ears or subtle whiskers.
-* Countdown Timer: Displayed as fish bones or a playful loading spinner that resembles a rolling ball of yarn.
-* Feed States: A "No posts yet" empty state displaying a clean line-art graphic of a sleeping cat.
+#### A. Pseudo-Random Daily Trigger (Local Spontaneity Model)
 
+Each user gets a random trigger time within their own 9:00 AM–9:00 PM local window. The mechanic is spontaneous rather than globally simultaneous — friends in different timezones trigger at different moments, which is intentional.
 
+- Seed the PRNG with the ISO date string in local time (`YYYY-MM-DD` derived from `new Date()` using local timezone).
+- Apply a deterministic hash (e.g., a 32-bit xorshift) to the seed string to produce a stable float in [0, 1).
+- Scale the float to the 12-hour window: `triggerTime = 9:00 AM local + fraction × 12 hours`.
+- **State machine:**
+  - Before trigger time: show a countdown.
+  - After trigger time, no post yet: lock the timeline and prompt the user to capture.
+  - After trigger time, post detected: show the filtered feed.
+- On app load, check `localStorage` for a cached "posted today" flag (keyed by local date string). If absent, fetch the user's own recent statuses to detect whether a `#meenowApp` post exists from today. Cache the result to avoid repeated API calls.
+
+#### B. Mobile Browser Dual-Camera Capture
+
+Mobile browsers cannot stream two cameras simultaneously. The sequential approach:
+
+1. Open back camera (`facingMode: "environment"`) via `getUserMedia`. Wait for the `loadedmetadata` event before capturing — do not use a fixed timer, as device camera initialization can take 1–2 s on both iOS and Android.
+2. Capture a still frame to a canvas buffer and stop the back-camera stream.
+3. Open front camera (`facingMode: "user"`). Again wait for `loadedmetadata`.
+4. Display a 3-second countdown with a live thumbnail preview of the front camera in a corner overlay.
+5. Capture the selfie frame and stop the front-camera stream.
+6. **Canvas stitching:** Draw the back-camera frame as the full background. Draw the selfie as a rounded rectangle inset in the top-left quadrant (approximately 35% of image width, with a white border). Export the composite as JPEG at quality 0.92.
+
+**Permission handling:** Catch `NotAllowedError` and `NotFoundError` from `getUserMedia`. Show a styled, platform-aware error card with instructions to reset camera permissions:
+- Android: Settings → Apps → [Browser] → Permissions → Camera
+- iOS: Settings → [Browser] → Camera
+
+#### C. Pixelfed OAuth — Dynamic App Registration
+
+The app has no hardcoded `client_id` or `client_secret` in its source. On first use with a given instance, the app registers itself at runtime:
+
+1. User enters their instance domain (e.g., `pixelfed.social`).
+2. App calls `POST https://{instance}/api/v1/apps` with:
+   - `client_name`: `meenow`
+   - `redirect_uris`: the app's own deployed URL
+   - `scopes`: `read write`
+3. Store the returned `client_id` and `client_secret` in `localStorage`, keyed by instance domain.
+4. Initiate Authorization Code Flow with PKCE: generate a random `code_verifier`, derive `code_challenge` via SHA-256, redirect to `https://{instance}/oauth/authorize`.
+5. On redirect back, exchange the authorization code for an access token via `POST /oauth/token`.
+6. Store the access token in `localStorage`. It is never sent to any party other than the user's own instance.
+
+**CORS:** Pixelfed is itself a browser-rendered web application; its own frontend makes these same API calls from the browser over CORS. Therefore all functional Pixelfed instances already serve the required `Access-Control-Allow-Origin: *` headers — confirmed on pixelfed.de and expected on all standard instances. If a user's instance is misconfigured, the app surfaces a clear error: _"Your instance does not support browser connections. Contact your instance administrator."_ There is no client-side workaround for a broken CORS configuration without a backend proxy, which violates the zero-backend constraint.
+
+#### D. Posting
+
+1. `POST /api/v1/media` with the stitched JPEG blob as `multipart/form-data`.
+2. Poll `GET /api/v1/media/{id}` until `processing` returns `"processed"`.
+3. `POST /api/v1/statuses` with `media_ids`, `visibility: "public"`, and a caption containing `#meenowApp`.
+4. On success, write the "posted today" flag to `localStorage` (keyed by local date) and unlock the feed.
+
+#### E. Feed Filtering
+
+Fetch `GET /api/v1/timelines/home` (paginate as needed):
+
+- Discard statuses where `Date.now() - new Date(status.created_at).getTime() > 86_400_000`.
+- Discard statuses whose `tags` array does not include an entry with `name === "meenowapp"` (the API lowercases tag names).
+- If the user has not posted today, render each remaining status card as a blurred placeholder with a cat-scratch texture overlay and the message: _"Curiosity killed the cat — post yours to see your friends."_
+- If no posts remain after filtering, show the sleeping-cat empty state illustration.
 
 ---
 
-## 4. Technical Constraints & Deployment Checklist
+### 3. UI/UX Specifications
 
-* **PWA Manifest:** Must include a valid `manifest.json` setting `display: "standalone"` and a functional Service Worker. This prompts iOS/Android users to "Add to Home Screen," which ensures the browser layout hides native URL bars for an app-like viewport.
-* **Zero Backend Operations:** Ensure absolute security—no client secrets or server configuration environmental variables are required by the static assets. Everything must resolve within browser memory.
-* **Permissions Handling:** Gracefully catch and display clear, stylized errors when a user denies Camera permissions, prompting them with instructions on how to reset site permissions in mobile settings.
+**Design system:** Warm minimalist. Background `#FDFBF7` (cream), primary accent `#2D2D2D` (dark slate), secondary accent `#C9A96E` (warm tabby gold).
+
+**Cat motifs (subtle):**
+- Shutter button: circular, with two small triangular ears at the top edge rendered as inline SVG.
+- Countdown arc: a thin circular progress indicator styled to fill like a winding ball of yarn.
+- Empty state: a clean line-art sleeping cat SVG, centered with generous whitespace.
+- Lock state: a semi-transparent paw-print pattern behind the blur overlay.
+
+**PWA install nudge:** On first launch, show an unobtrusive bottom banner explaining that adding meenow to the home screen enables a native-app experience and is required for web push notifications on iOS. Android users see the standard browser install prompt where available. iOS users see step-by-step instructions (Share → Add to Home Screen). The banner reappears weekly until dismissed as installed.
+
+**PWA manifest:** `display: "standalone"`, `orientation: "portrait"`, icon set covering iOS (180×180) and Android (192×192, 512×512 maskable). A Service Worker caches all static assets for offline resilience.
 
 ---
 
-## 5. Implementation Roadmap for the LLM Agent
+### 4. Known Limitations
 
-1. **Phase 1: Project Setup & Deterministic Timer Engine** — Build the static site architecture, seed-based PRNG math, and visual countdown state logic.
-2. **Phase 2: Camera Prototype** — Build the sequential stream switcher and HTML5 Canvas stitching engine. Test extensively against mobile viewport dimensions.
-3. **Phase 3: Pixelfed Authentication Bridge** — Set up instance-independent OAuth redirect workflows and store state locally.
-4. **Phase 4: Timeline Processing** — Write the filtering logic for the timeline API, including the unblur layer and 24-hour expiration threshold.
-5. **Phase 5: Cat Theme Polish & PWA Deployment** — Style the app according to the *meeow* theme specifications, finalize the PWA manifest, and deploy to GitHub Pages.
+- **Push notifications on iOS:** Web Push requires the PWA to be installed to the home screen (iOS 16.4+). Users who have not installed the app will not receive system-level notifications and must open the app manually to check if it is meenow time. The install nudge directly addresses this.
+- **Camera resolution:** `getUserMedia` resolution is browser- and device-controlled and will typically be lower than the native camera application. The composite JPEG reflects whatever resolution the browser exposes.
+- **Instance compatibility:** Designed and tested against standard Pixelfed instances. Mastodon instances expose the same API surface and are likely compatible but are not officially targeted.
+
+---
+
+### 5. Implementation Roadmap
+
+| Phase | Scope |
+|-------|-------|
+| 1 | Project scaffold (Vite + TypeScript + Tailwind + PWA manifest + Service Worker), PRNG timer engine, countdown UI |
+| 2 | Sequential camera capture, canvas stitching, permission error handling (Android + iOS) |
+| 3 | Dynamic OAuth registration, PKCE flow, token storage |
+| 4 | Media upload pipeline, status post, "posted today" detection logic |
+| 5 | Feed fetch, 24-hour filter, `#meenowApp` tag filter, blur overlay |
+| 6 | Cat theme polish, install nudge banner, responsive desktop fallback, deployment to GitHub Pages |
