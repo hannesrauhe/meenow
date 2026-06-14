@@ -26,10 +26,10 @@ There are two separate GitHub repositories, each deploying to its own domain via
 
 | Repo | Domain | Deploy trigger |
 |------|--------|---------------|
-| `hannesrauhe/meenow` (this repo) | `dev.meenow.de` | every push to any branch |
-| `meenow-de/meenow` | `meenow.de` | push to `main` only, with environment protection (manual approval gate) |
+| `hannesrauhe/meenow` (this repo) | `dev.meenow.de` | every push to any branch, deploys immediately |
+| `meenow-de/meenow` | `meenow.de` | every push to any branch, but requires manual approval |
 
-The workflow file is `.github/workflows/deploy.yml`. The two repos share the same workflow structure — the only difference is the `on:` trigger. The production repo keeps `push: branches: [main]`; this dev repo has no branch filter.
+The workflow file `.github/workflows/deploy.yml` is **identical in both repos**. The difference in behaviour comes entirely from the `github-pages` environment protection rule configured in `meenow-de/meenow` (Settings → Environments → github-pages → Required reviewers). The `deploy` job pauses there until a reviewer approves; on the dev repo there is no such rule so it deploys immediately.
 
 Custom domains are configured in each repo's GitHub Pages settings (Settings → Pages → Custom domain). No `CNAME` file is needed in the source tree because both repos use the artifact-based Pages deployment (`actions/upload-pages-artifact` + `actions/deploy-pages`), which preserves the custom domain setting stored in GitHub's backend across deployments.
 
