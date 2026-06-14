@@ -147,7 +147,7 @@ export function renderCapture(): HTMLElement {
     btn.className = 'w-20 h-20 text-ink hover:text-gold transition-colors active:scale-95';
     btn.setAttribute('aria-label', 'Start camera');
     btn.innerHTML = CAT_EARS_SHUTTER;
-    btn.addEventListener('click', () => startBack());
+    btn.addEventListener('click', () => show('back'));
     d.appendChild(btn);
     return d;
   }
